@@ -1,0 +1,110 @@
+app: migration-m2-gama
+service: migration-m2-gama
+
+frameworkVersion: ">=2.24.0"
+
+provider:
+  name: aws
+  runtime: go1.x
+  environment:
+    MIGRATED_USERS_TABLE: ${self:service}-${opt:stage, self:provider.stage}-migrated-users
+    MIGRATED_ADDRESSES_TABLE: ${self:service}-${opt:stage, self:provider.stage}-migrated-addresses
+    MIGRATED_HASH_TABLE: ${self:service}-${opt:stage, self:provider.stage}-migrated-hash
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource: "arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/${self:provider.environment.MIGRATED_USERS_TABLE}"
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource: "arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/${self:provider.environment.MIGRATED_ADDRESSES_TABLE}"
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource: "arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/${self:provider.environment.MIGRATED_HASH_TABLE}"
+          
+
+functions:
+
+  syncUsers:
+    memorySize: 3008
+    timeout: 500
+    handler: bin/syncUsers
+    package:
+      include:
+        - ./bin/syncUsers
+    events:
+      - http:
+          path: users
+          method: post
+          cors: true
+
+resources:
+  Resources:
+    UsersDynamoDbTable:
+      Type: 'AWS::DynamoDB::Table'
+      DeletionPolicy: Retain
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: email
+            AttributeType: S
+        KeySchema:
+          -
+            AttributeName: email
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: ${self:provider.environment.MIGRATED_USERS_TABLE}
+    AddressesDynamoDbTable:
+      Type: 'AWS::DynamoDB::Table'
+      DeletionPolicy: Retain
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: email
+            AttributeType: S
+        KeySchema:
+          -
+            AttributeName: email
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: ${self:provider.environment.MIGRATED_ADDRESSES_TABLE}
+    HashDynamoDbTable:
+      Type: 'AWS::DynamoDB::Table'
+      DeletionPolicy: Retain
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: email
+            AttributeType: S
+        KeySchema:
+          -
+            AttributeName: email
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: ${self:provider.environment.MIGRATED_HASH_TABLE}
+        
